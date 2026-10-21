@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mute.</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233565ee'/%3E%3Ctext x='16' y='22' font-family='Arial' font-size='17' font-weight='700' fill='%23fff' text-anchor='middle'%3EM%3C/text%3E%3C/svg%3E">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  :root{
+    --bg:#ffffff; --border:#e4e4e7; --ink:#0d0d0f; --muted:#6e6e73;
+    --blue:#0b7ee9; --blue-soft:#ecf3fe; --btnblue:#3565ee;
+    --inputbar:#f2f2f4; --pillborder:#dcdcdf; --placeholder:#9c9ca0;
+  }
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased; overflow:hidden;
+  }
+  button{font-family:inherit;background:none;border:none;color:inherit;cursor:pointer}
+  a{color:var(--blue);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  #app{height:100dvh;display:flex;flex-direction:column}
+
+  /* ===== 顶部栏 ===== */
+  #topbar{
+    height:56px;flex:0 0 56px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 8px;border-bottom:1px solid var(--border);background:var(--bg);position:relative;z-index:30;
+  }
+  .top-btn{
+    width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    color:var(--ink);position:relative;overflow:hidden;transition:background .15s;
+  }
+  .top-btn:hover{background:#f2f2f4}
+  .top-btn svg{width:22px;height:22px}
+  .tabs{display:flex;gap:2px;background:#ececf1;border-radius:10px;padding:3px}
+  .tab{
+    min-width:74px;height:32px;padding:0 14px;border-radius:8px;font-size:14.5px;font-weight:500;color:var(--muted);
+    display:flex;align-items:center;justify-content:center;transition:all .18s;position:relative;overflow:hidden;
+  }
+  .tab.active{background:var(--bg);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+
+  /* ===== 主区域 ===== */
+  #main{flex:1 1 auto;position:relative;min-height:0}
+  .view{position:absolute;inset:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;display:none}
+  .view.active{display:block;animation:viewIn .25s ease}
+  @keyframes viewIn{from{opacity:0}to{opacity:1}}
+
+  /* 聊天视图：内部纵向 flex，消息区滚动，提示条贴输入框 */
+  #view-chat{overflow:hidden}
+  #view-chat.active{display:flex;flex-direction:column}
+  .chat-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;width:100%;max-width:760px;margin:0 auto}
+  .chat-col{max-width:760px;margin:0 auto;padding:14px 14px 20px}
+
+  /* ===== 助手文字（固定字形，左→右遮罩 + 大范围渐显，不下沉、不模糊） ===== */
+  .aline{
+    font-size:15.5px;line-height:1.7;color:var(--ink);margin-bottom:4px;font-weight:700;
+    opacity:0;clip-path:inset(0 100% 0 0);
+    transition:opacity 1.05s cubic-bezier(.22,.61,.36,1),clip-path 1.05s cubic-bezier(.22,.61,.36,1);
+    white-space:pre-wrap;word-break:break-word;
+  }
+  .aline.bold{font-weight:800}
+  .aline.spacer{height:10px;opacity:1;clip-path:none}
+  .aline.shown{opacity:1;clip-path:inset(0 0 0 0)}
+
+  /* ===== 用户气泡：浅底 + 蓝色文字，无边框 ===== */
+  .msg.user{display:flex;justify-content:flex-end;margin:20px 0 16px}
+  .msg.user .bubble{
+    max-width:78%;background:var(--blue-soft);color:var(--blue);border:none;
+    border-radius:18px;border-bottom-right-radius:6px;
+    padding:11px 16px;font-size:15.5px;font-weight:700;line-height:1.55;word-break:break-word;
+    animation:bubbleIn .3s ease;
+  }
+  @keyframes bubbleIn{from{opacity:0;transform:translateY(6px) scale(.97)}to{opacity:1;transform:none}}
+  .msg.assistant{margin:16px 0 20px;max-width:96%}
+
+  /* 思考指示：仅浅色 Thinking 文字，无跳动小点 */
+  .thinking{
+    display:inline-flex;align-items:center;font-size:14px;color:#b7b7bd;padding:6px 2px;
+    opacity:0;transition:opacity .4s ease;
+  }
+  .thinking.on{opacity:1}
+
+  /* 助手图片消息：Thought 浅色文字 + 横向滑动图片组 */
+  .assistant-media{margin:8px 0 6px}
+  .thought-for{font-size:14px;color:#b7b7bd;padding:4px 2px 8px;letter-spacing:.2px}
+  .img-scroll{
+    display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;
+    padding:2px 2px 8px;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:#d8d8de transparent}
+  .img-scroll::-webkit-scrollbar{height:4px}
+  .img-scroll::-webkit-scrollbar-track{background:transparent}
+  .img-scroll::-webkit-scrollbar-thumb{background:#d8d8de;border-radius:2px}
+  .img-card{
+    flex:0 0 auto;width:190px;height:190px;border-radius:12px;overflow:hidden;
+    background:#f2f2f4;scroll-snap-align:start;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .img-card img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+
+  /* 选项卡片 */
+  .opt{display:flex;justify-content:flex-start;margin:10px 0}
+  .opt-btn{
+    display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid #e0e0e3;border-radius:14px;
+    padding:10px 15px 10px 10px;font-size:16px;font-weight:600;color:var(--ink);max-width:78%;text-align:left;position:relative;overflow:hidden;
+    transition:background .15s,box-shadow .15s;box-shadow:0 1px 2px rgba(0,0,0,.04);
+  }
+  .opt-btn:hover{background:#f7f7f8;box-shadow:0 2px 6px rgba(0,0,0,.07)}
+  .opt-plus{
+    width:26px;height:26px;flex:0 0 26px;border-radius:8px;background:#ececf1;color:var(--ink);
+    display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:500;line-height:1;
+  }
+
+  /* 初始三行提示：无边框、浅色，与输入框左对齐、图标文字居中对齐，对话开始后隐藏 */
+  .suggest-strip{flex:0 0 auto;width:100%;max-width:760px;margin:0 auto;padding:8px 10px 4px}
+  .suggest-strip.hidden{display:none}
+  .srow{
+    display:flex;align-items:center;gap:8px;padding:9px 8px;color:#b9b9c0;font-size:17px;
+    pointer-events:none;user-select:none;
+  }
+  .s-icon{width:40px;height:40px;flex:0 0 40px;display:flex;align-items:center;justify-content:center;color:#c7c7cd}
+  .s-icon svg{width:20px;height:20px}
+  .srow .s-text{letter-spacing:.3px}
+
+  /* ===== Work 白屏视图：上下左右居中，整体略上移；固定字形渐显 ===== */
+  .work-center{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 26px;transform:translateY(-6%)}
+  .work-center .wline{
+    font-size:18px;line-height:2.1;font-weight:700;color:#2c2c30;text-align:center;max-width:480px;white-space:pre-wrap;
+    opacity:0;
+    transition:opacity .8s cubic-bezier(.22,.61,.36,1);
+  }
+  .work-center .wline.shown{opacity:1}
+
+  /* ===== 内容页（Melancholy / Drowning / Reverie） ===== */
+  .cp-wrap{height:100%;display:flex;flex-direction:column}
+  .cp-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 26px 60px;text-align:center}
+  .cp-back{
+    flex:0 0 auto;align-self:flex-start;margin:12px 14px;font-size:13.5px;color:var(--muted);
+    display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:9px;transition:background .15s;position:relative;overflow:hidden;
+  }
+  .cp-back:hover{background:#f2f2f4;color:var(--ink)}
+  .cp-back svg{width:15px;height:15px}
+  .cp-title{font-size:30px;font-weight:800;letter-spacing:.5px;margin-bottom:6px}
+  .cp-tag{font-size:15px;font-weight:400;color:var(--muted);margin-left:4px}
+  .cp-sub{font-size:14.5px;font-weight:600;line-height:1.8;color:#3a3a3e;margin:18px 0 26px;max-width:440px;white-space:pre-wrap}
+  .cp-link{
+    display:inline-flex;align-items:center;gap:7px;border:1px solid #dcdcdf;border-radius:12px;padding:10px 18px;
+    font-size:14.5px;font-weight:600;color:var(--blue);transition:background .15s,box-shadow .15s;position:relative;overflow:hidden;
+  }
+  .cp-link:hover{background:#f0f7ff;text-decoration:none;box-shadow:0 2px 6px rgba(11,126,233,.12)}
+  .cp-link svg{width:16px;height:16px}
+  .cp-drawer-btn{
+    flex:0 0 auto;align-self:center;margin:6px 0 22px;border:1px solid var(--border);background:var(--bg);
+    border-radius:999px;padding:10px 22px;font-size:14.5px;font-weight:600;color:var(--ink);position:relative;overflow:hidden;
+    transition:background .15s,box-shadow .15s;
+  }
+  .cp-drawer-btn:hover{background:#f7f7f8;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+
+  /* ===== 结尾页：引言 + 双独立时钟卡片 ===== */
+  .ending-quote{font-size:16px;font-weight:600;line-height:1.9;color:#3a3a3e;max-width:430px;margin:0 0 30px;text-align:center;white-space:pre-wrap}
+  .clock-stack{display:flex;flex-direction:column;align-items:center;gap:22px;width:min(340px,88%)}
+  .clock-card{width:100%;background:var(--bg);border:1px solid #ececef;border-radius:22px;
+    padding:26px 22px 22px;box-shadow:0 8px 28px rgba(11,126,233,.08);
+    display:flex;flex-direction:column;align-items:center;gap:14px}
+  .clock-time{display:inline-flex;align-items:baseline;justify-content:center;font-size:38px;font-weight:800;color:#38383f;
+    letter-spacing:1.5px;font-variant-numeric:tabular-nums;line-height:1;perspective:600px}
+  .clock-colon{padding:0 3px;color:#9a9aa0;font-weight:600}
+  .clock-caption{font-size:14px;font-weight:600;color:var(--muted);letter-spacing:.5px}
+  /* 翻页时钟：静止数字上下两半拼成、中缝分隔；变化时旧数字留在底层，两片翻页先后绕中缝翻转，新在片背、翻完盖住旧数字 */
+  .digit{display:inline-block;position:relative;vertical-align:middle;width:.72em;height:1.22em;min-width:.72em}
+  .half{position:absolute;left:0;right:0;height:50%;overflow:hidden;background:#fff}
+  .half.top{top:0;border-bottom:1px solid #d8d8de}
+  .half.bottom{bottom:0}
+  .half .inner{position:absolute;left:0;right:0;height:1.22em;line-height:1.22em;text-align:center;font-variant-numeric:tabular-nums}
+  .half.top .inner{top:0}
+  .half.bottom .inner{top:-0.61em}
+  /* 上半：旧上片由顶部向下折走、露出新上半；下半：新下半封页折起后翻平盖住旧下半；旧底子保留不挪走 */
+  .digit.flip .base.top{z-index:0}
+  .digit.flip .base.bottom{z-index:1}
+  .digit.flip .station.top{z-index:2}
+  .digit.flip .cover.bottom{z-index:3}
+  .fold{position:absolute;left:0;right:0;height:50%;overflow:hidden;background:#fff;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+    will-change:transform;transform:translateZ(0)}
+  .fold-top{top:0;border-bottom:1px solid #d8d8de;transform-origin:bottom;z-index:4;
+    animation:foldTop .32s cubic-bezier(.45,.05,.55,.95) forwards}
+  .cover{position:absolute;left:0;right:0;height:50%;overflow:hidden;background:#fff;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+    will-change:transform;transform:translateZ(0)}
+  .cover.bottom{bottom:0;transform-origin:top;z-index:3;transform:translateZ(0) rotateX(180deg);
+    animation:coverBottom .32s cubic-bezier(.22,.61,.36,1) .32s forwards}
+  .fold .inner,.cover .inner{position:absolute;left:0;right:0;height:1.22em;line-height:1.22em;text-align:center;font-variant-numeric:tabular-nums}
+  .fold-top .inner{top:0}
+  .cover.bottom .inner{top:-.61em}
+  @keyframes foldTop{0%{transform:translateZ(0) rotateX(0)}100%{transform:translateZ(0) rotateX(-180deg)}}
+  @keyframes coverBottom{0%{transform:translateZ(0) rotateX(180deg)}100%{transform:translateZ(0) rotateX(0)}}
+
+  /* ===== 底部输入栏（禁用，不可输入/发送） ===== */
+  #inputbar{flex:0 0 auto;background:var(--inputbar);padding:9px 10px calc(9px + env(safe-area-inset-bottom,0));display:none;z-index:30}
+  #inputbar.show{display:block}
+  .input-inner{max-width:760px;margin:0 auto}
+  .input-pill{
+    display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--pillborder);border-radius:28px;
+    padding:7px 10px;box-shadow:0 1px 3px rgba(0,0,0,.05);
+  }
+  .ip-btn{width:40px;height:40px;flex:0 0 40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--muted);cursor:default}
+  .ip-btn svg{width:20px;height:20px}
+  .ip-btn.send{background:var(--btnblue);color:#fff;cursor:default}
+  .ip-btn.send svg{width:19px;height:19px}
+  #chatInput{flex:1;min-width:0;border:none;outline:none;font-size:17px;color:var(--ink);background:transparent;height:40px;padding:0 4px;pointer-events:none}
+  #chatInput:disabled{opacity:1;cursor:default}
+  #chatInput::placeholder{color:var(--placeholder)}
+
+  /* ===== 抽屉 ===== */
+  .drawer-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.42);opacity:0;pointer-events:none;transition:opacity .28s ease;z-index:90}
+  .drawer-backdrop.show{opacity:1;pointer-events:auto}
+  #drawer{
+    position:fixed;top:0;left:0;height:100dvh;width:86vw;max-width:320px;background:var(--bg);z-index:100;
+    transform:translateX(-100%);transition:transform .3s cubic-bezier(.25,.8,.3,1);
+    display:flex;flex-direction:column;box-shadow:2px 0 20px rgba(0,0,0,.12);
+  }
+  @media(min-width:768px){#drawer{width:340px;max-width:340px}}
+  #drawer.open{transform:translateX(0)}
+
+  .drawer-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px}
+  .drawer-title{font-size:22px;font-weight:800;letter-spacing:.2px}
+  .drawer-head-actions{display:flex;gap:2px}
+  .drawer-icon-btn{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ink);position:relative;overflow:hidden}
+  .drawer-icon-btn svg{width:21px;height:21px}
+  .drawer-icon-btn.static{cursor:default}
+  .drawer-icon-btn.hoverable:hover{background:#f2f2f4}
+
+  .nav-row{display:flex;align-items:center;gap:16px;padding:15px 20px;font-size:18px;font-weight:600;color:var(--ink);cursor:default}
+  .nav-row svg{width:22px;height:22px;flex:0 0 22px}
+
+  .drawer-sec{padding:18px 20px 8px;font-size:17px;font-weight:800;color:var(--ink)}
+  .drawer-item{
+    display:flex;align-items:center;gap:16px;width:100%;text-align:left;font-size:18px;font-weight:600;color:var(--ink);
+    padding:13px 20px;position:relative;overflow:hidden;transition:background .15s;
+  }
+  .drawer-item:hover{background:#f4f4f6}
+  .drawer-item svg{width:22px;height:22px;flex:0 0 22px}
+
+  .drawer-foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;padding:14px 16px 20px}
+  .new-chat{
+    display:flex;align-items:center;gap:9px;background:var(--btnblue);color:#fff;border-radius:999px;
+    padding:10px 18px;font-size:16px;font-weight:700;position:relative;overflow:hidden;
+  }
+  .new-chat svg{width:18px;height:18px}
+  .gear{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ink);cursor:default}
+  .gear svg{width:22px;height:22px}
+
+  .ripple{position:absolute;border-radius:50%;background:rgba(0,0,0,.12);transform:scale(0);animation:ripple .55s ease-out forwards;pointer-events:none}
+  @keyframes ripple{to{transform:scale(1);opacity:0}}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- 顶部栏 -->
+  <header id="topbar">
+    <button id="btnMenu" class="top-btn" aria-label="打开侧拉栏">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <div class="tabs">
+      <button class="tab active" data-view="chat">Chat</button>
+      <button class="tab" data-view="work">Work</button>
+    </div>
+    <button id="btnMusic" class="top-btn" aria-label="播放或关闭音乐">
+      <svg id="icoMusicOn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg>
+      <svg id="icoMusicOff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/><path d="M4 4l16 16"/></svg>
+    </button>
+  </header>
+
+  <!-- 主区域 -->
+  <main id="main">
+    <!-- 视图：Chat 主聊天 -->
+    <section id="view-chat" class="view active">
+      <div class="chat-scroll" id="chatScroll">
+        <div class="chat-col" id="chatCol"></div>
+      </div>
+      <div id="suggestStrip" class="suggest-strip">
+        <div class="srow">
+          <span class="s-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg></span>
+          <span class="s-text">I miss u</span>
+        </div>
+        <div class="srow">
+          <span class="s-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg></span>
+          <span class="s-text">I love u</span>
+        </div>
+        <div class="srow">
+          <span class="s-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg></span>
+          <span class="s-text">I need u</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 视图：Work 白屏 -->
+    <section id="view-work" class="view">
+      <div class="work-center">
+        <div class="wline">和我相拥吧。</div>
+        <div class="wline" style="transition-delay:.25s">拥抱会帮助我们吸收彼此人生的颠簸，</div>
+        <div class="wline" style="transition-delay:.5s">让我们都好受些。</div>
+      </div>
+    </section>
+
+    <!-- 视图：话术展示 Melancholy -->
+    <section id="view-melancholy" class="view">
+      <div class="cp-wrap">
+        <button class="cp-back js-back-chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>返回对话</button>
+        <div class="cp-body">
+          <h1 class="cp-title">Melancholy<span class="cp-tag">板评</span></h1>
+          <p class="cp-sub">有一天大火烧着了我们的房子。你会说好，我们重新开始。</p>
+          <a class="cp-link" href="https://www.kdocs.cn/l/cqIl2tQGLmIx" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
+            查看链接
+          </a>
+        </div>
+        <button class="cp-drawer-btn js-back-drawer">返回侧拉栏</button>
+      </div>
+    </section>
+
+    <!-- 视图：板评类 Drowning -->
+    <section id="view-drowning" class="view">
+      <div class="cp-wrap">
+        <button class="cp-back js-back-chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>返回对话</button>
+        <div class="cp-body">
+          <h1 class="cp-title">Drowning<span class="cp-tag">板评</span></h1>
+          <p class="cp-sub">缘分就像是点燃的一根烟，燃烧殆尽的烟灰是我们曾经的碎片。</p>
+          <a class="cp-link" href="https://www.kdocs.cn/l/chuYUIw2LTNe" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
+            查看链接
+          </a>
+        </div>
+        <button class="cp-drawer-btn js-back-drawer">返回侧拉栏</button>
+      </div>
+    </section>
+
+    <!-- 视图：礼物与卡 Reverie -->
+    <section id="view-reverie" class="view">
+      <div class="cp-wrap">
+        <button class="cp-back js-back-chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>返回对话</button>
+        <div class="cp-body">
+          <h1 class="cp-title">Reverie<span class="cp-tag">卡与礼物</span></h1>
+          <p class="cp-sub">我们是这样孤独的个体，有时甚至爱也不能让我们相通。</p>
+          <a class="cp-link" href="https://www.kdocs.cn/l/cbP7hdXwzvsA" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
+            查看链接
+          </a>
+        </div>
+        <button class="cp-drawer-btn js-back-drawer">返回侧拉栏</button>
+      </div>
+    </section>
+
+    <!-- 视图：结尾（双时钟） -->
+    <section id="view-ending" class="view">
+      <div class="cp-wrap">
+        <button class="cp-back js-back-chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>返回对话</button>
+        <div class="cp-body">
+          <p class="ending-quote">*冬令时中英时差8小时，我也爱你32小时。</p>
+          <div class="clock-stack">
+            <div class="clock-card">
+              <span class="clock-time" id="clockBj" aria-label="北京时间"></span>
+              <span class="clock-caption">北京时间</span>
+            </div>
+            <div class="clock-card">
+              <span class="clock-time" id="clockLon" aria-label="伦敦时间"></span>
+              <span class="clock-caption">伦敦时间</span>
+            </div>
+          </div>
+        </div>
+        <button class="cp-drawer-btn js-back-drawer">返回侧拉栏</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- 底部输入栏（禁用） -->
+  <footer id="inputbar" class="show">
+    <div class="input-inner">
+      <div class="input-pill">
+        <span class="ip-btn" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </span>
+        <input id="chatInput" type="text" placeholder="Ask Mute." disabled autocomplete="off" tabindex="-1">
+        <span class="ip-btn" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5"/></svg>
+        </span>
+        <span class="ip-btn send" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.6 21 12 3.4 3.4 3.3 9.9l12 2.1-12 2.1z"/></svg>
+        </span>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<!-- 抽屉遮罩 -->
+<div id="drawerBackdrop" class="drawer-backdrop"></div>
+
+<!-- 抽屉 P2（复刻 P4） -->
+<aside id="drawer" aria-label="侧拉栏">
+  <div class="drawer-head">
+    <div class="drawer-title">Mute.</div>
+    <div class="drawer-head-actions">
+      <button class="drawer-icon-btn static" aria-label="搜索" tabindex="-1">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.8-3.8"/></svg>
+      </button>
+      <button class="drawer-icon-btn hoverable" id="btnCloseDrawer" aria-label="关闭侧拉栏">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <nav class="drawer-nav">
+    <div class="nav-row">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4.5" y="4" width="3.5" height="16" rx="1.75"/><rect x="10.25" y="4" width="3.5" height="16" rx="1.75"/><rect x="16" y="4" width="3.5" height="16" rx="1.75"/></svg>
+      Library
+    </div>
+    <div class="nav-row">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      Projects
+    </div>
+    <div class="nav-row">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>
+      Plugins
+    </div>
+    <div class="nav-row">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+      Scheduled
+    </div>
+    <div class="nav-row">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>
+      Codex
+    </div>
+    <div class="nav-row">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.6"/></svg>
+      Explore
+    </div>
+  </nav>
+
+  <div class="drawer-sec">Pinned</div>
+  <button class="drawer-item" data-go="melancholy">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.5 0-3-.4-4.2-1.1L3 20l1.1-5.3A8.5 8.5 0 1 1 21 11.5z"/></svg>
+    话术展示
+  </button>
+  <button class="drawer-item" data-go="drowning">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.5 0-3-.4-4.2-1.1L3 20l1.1-5.3A8.5 8.5 0 1 1 21 11.5z"/></svg>
+    板评类
+  </button>
+  <button class="drawer-item" data-go="reverie">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.5 0-3-.4-4.2-1.1L3 20l1.1-5.3A8.5 8.5 0 1 1 21 11.5z"/></svg>
+    礼物与卡
+  </button>
+  <button class="drawer-item" data-go="ending">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+    结尾
+  </button>
+
+  <div class="drawer-foot">
+    <button class="new-chat" id="btnNewChat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19z"/></svg>
+      Chat
+    </button>
+    <span class="gear" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.01a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.01a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1z"/></span>
+  </div>
+</aside>
+
+<script>
+(function(){
+  "use strict";
+  var chatCol = document.getElementById('chatCol');
+  var chatScroll = document.getElementById('chatScroll');
+  var suggestStrip = document.getElementById('suggestStrip');
+  var inputbar = document.getElementById('inputbar');
+  var musicOn = false;
+
+  /* ---------- 视图路由（自由切换，双向） ---------- */
+  var VIEWS = ['chat','work','melancholy','drowning','reverie','ending'];
+  function setView(name){
+    if(VIEWS.indexOf(name)===-1) return;
+    VIEWS.forEach(function(v){
+      document.getElementById('view-'+v).classList.toggle('active', v===name);
+    });
+    document.querySelectorAll('.tab').forEach(function(t){
+      t.classList.toggle('active', t.getAttribute('data-view')===name);
+    });
+    inputbar.classList.toggle('show', name==='chat');
+    if(name==='work'){ revealWork(); }
+    if(name==='ending'){ startClock(); } else { stopClock(); }
+  }
+  document.querySelectorAll('.tab').forEach(function(t){
+    t.addEventListener('click', function(e){
+      ripple(e);
+      setView(t.getAttribute('data-view'));
+    });
+  });
+
+  /* Work 白屏渐显出字（多行，柔和过渡） */
+  var workDone = false;
+  function revealWork(){
+    if(workDone) return;
+    workDone = true;
+    setTimeout(function(){
+      document.querySelectorAll('#view-work .wline').forEach(function(el){ el.classList.add('shown'); });
+    }, 60);
+  }
+
+  /* ---------- 结尾页双时钟：北京 / 伦敦，实时同步，变化数字滚动动效 ---------- */
+  var clockTimer = null;
+  function pad2(n){ return String(n).padStart(2,'0'); }
+  function timeParts(tz){
+    var fmt = new Intl.DateTimeFormat('en-GB',{timeZone:tz,hourCycle:'h23',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    var o = {};
+    fmt.formatToParts(new Date()).forEach(function(x){ if(x.type!=='literal'){ o[x.type]=x.value; } });
+    return pad2(o.hour)+':'+pad2(o.minute)+':'+pad2(o.second);
+  }
+  function renderClock(el, str){
+    var old = el.getAttribute('data-str')||'';
+    if(old===str) return;
+    el.setAttribute('data-str', str);
+    el.innerHTML='';
+    function makeHalf(txt, cls){
+      var h = document.createElement('span'); h.className=cls;
+      var inner = document.createElement('span'); inner.className='inner'; inner.textContent=txt;
+      h.appendChild(inner); return h;
+    }
+    for(var i=0;i<str.length;i++){
+      var ch = str[i];
+      if(ch===':'){
+        var col = document.createElement('span');
+        col.className='clock-colon'; col.textContent=':';
+        el.appendChild(col); continue;
+      }
+      var d = document.createElement('span');
+      if(old[i] && old[i]!==ch){
+        d.className='digit flip';
+        /* 底层：旧数字上下两半，保留不挪走、不先删除 */
+        d.appendChild(makeHalf(old[i],'half base top'));
+        d.appendChild(makeHalf(old[i],'half base bottom'));
+        /* 中层：新上半，初始被旧上片盖住，翻走后露出 */
+        d.appendChild(makeHalf(ch,'half station top'));
+        /* 前片：旧上半由顶部向下折到中缝再翻走，露出新上半 */
+        d.appendChild(makeHalf(old[i],'fold fold-top'));
+        /* 下半：新下半封页折起后翻平，盖住旧下半 */
+        d.appendChild(makeHalf(ch,'cover bottom'));
+      }else{
+        d.className='digit';
+        d.appendChild(makeHalf(ch,'half top'));
+        d.appendChild(makeHalf(ch,'half bottom'));
+      }
+      el.appendChild(d);
+    }
+  }
+  function tickClock(){
+    renderClock(document.getElementById('clockBj'), timeParts('Asia/Shanghai'));
+    renderClock(document.getElementById('clockLon'), timeParts('Europe/London'));
+  }
+  function startClock(){
+    stopClock();
+    tickClock();
+    clockTimer = setInterval(tickClock, 1000);
+  }
+  function stopClock(){
+    if(clockTimer){ clearInterval(clockTimer); clockTimer=null; }
+  }
+
+  /* ---------- 波纹交互特效（仅可点元素） ---------- */
+  function ripple(e){
+    var el = e.currentTarget; if(!el) return;
+    var r = el.getBoundingClientRect();
+    var d = Math.max(r.width, r.height);
+    var span = document.createElement('span');
+    span.className = 'ripple';
+    span.style.width = span.style.height = d + 'px';
+    span.style.left = (e.clientX - r.left - d/2) + 'px';
+    span.style.top  = (e.clientY - r.top  - d/2) + 'px';
+    el.appendChild(span);
+    setTimeout(function(){ span.remove(); }, 600);
+  }
+  document.querySelectorAll('.tab, .drawer-item, .top-btn, .opt-btn, .cp-link, .cp-back, .cp-drawer-btn, .new-chat, #btnCloseDrawer').forEach(function(el){
+    el.addEventListener('click', ripple);
+  });
+
+  /* ---------- 聊天消息 ---------- */
+  function scrollBottom(){
+    chatScroll.scrollTop = chatScroll.scrollHeight;
+  }
+
+  /* 右侧浅蓝气泡（用户） */
+  function addUser(text){
+    var msg = document.createElement('div');
+    msg.className = 'msg user';
+    var b = document.createElement('div');
+    b.className = 'bubble';
+    b.textContent = text;
+    msg.appendChild(b);
+    chatCol.appendChild(msg);
+    scrollBottom();
+  }
+
+  /* 思考指示：仅浅色 Thinking 文字 */
+  function showThinking(cb){
+    var msg = document.createElement('div');
+    msg.className = 'msg assistant';
+    var t = document.createElement('div');
+    t.className = 'thinking';
+    t.textContent = 'Thinking';
+    msg.appendChild(t);
+    chatCol.appendChild(msg);
+    scrollBottom();
+    requestAnimationFrame(function(){ t.classList.add('on'); });
+    setTimeout(function(){ t.classList.remove('on'); }, 700);
+    setTimeout(function(){ msg.remove(); scrollBottom(); cb(); }, 900);
+  }
+
+  /* 多行柔和渐显；全部出完后回调 done */
+  function addAssistant(lines, done){
+    var msg = document.createElement('div');
+    msg.className = 'msg assistant';
+    var lastDelay = 0;
+    lines.forEach(function(ln, i){
+      if(ln.text === ''){
+        var sp = document.createElement('div');
+        sp.className = 'aline spacer';
+        msg.appendChild(sp);
+        return;
+      }
+      var d = document.createElement('div');
+      d.className = 'aline' + (ln.bold ? ' bold' : '');
+      d.textContent = ln.text;
+      msg.appendChild(d);
+      var delay = 60 + i*140;
+      lastDelay = delay;
+      setTimeout(function(){ d.classList.add('shown'); }, delay);
+    });
+    chatCol.appendChild(msg);
+    scrollBottom();
+    setTimeout(scrollBottom, lastDelay + 900);
+    if(done){ setTimeout(done, lastDelay + 960); }
+  }
+
+  /* 助手图片消息：Thought for 7s 浅色文字 + 六张横向滑动图片 */
+  function addAssistantMedia(photos, done){
+    var msg = document.createElement('div');
+    msg.className = 'msg assistant assistant-media';
+    var label = document.createElement('div');
+    label.className = 'thought-for';
+    label.textContent = 'Thought for 7s';
+    msg.appendChild(label);
+    var scroll = document.createElement('div');
+    scroll.className = 'img-scroll';
+    photos.forEach(function(src){
+      var card = document.createElement('div');
+      card.className = 'img-card';
+      var img = document.createElement('img');
+      img.src = src;
+      img.alt = '';
+      img.draggable = false;
+      card.appendChild(img);
+      scroll.appendChild(card);
+    });
+    msg.appendChild(scroll);
+    msg.style.opacity = '0';
+    msg.style.transition = 'opacity .5s ease';
+    chatCol.appendChild(msg);
+    scrollBottom();
+    requestAnimationFrame(function(){ msg.style.opacity = '1'; });
+    setTimeout(scrollBottom, 260);
+    if(done){ setTimeout(done, 560); }
+  }
+
+  /* 选项卡片；send=false 时只移除选项、不发送气泡 */
+  function addOption(text, cb, send){
+    if(send === undefined) send = true;
+    var wrap = document.createElement('div');
+    wrap.className = 'opt';
+    var btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.innerHTML = '<span class="opt-plus">+</span><span></span>';
+    btn.querySelector('span:last-child').textContent = text;
+    btn.addEventListener('click', function(e){
+      ripple(e);
+      wrap.remove();
+      if(send){
+        suggestStrip.classList.add('hidden');
+        addUser(text);
+        setTimeout(cb, 320);
+      }else{
+        cb();
+      }
+    });
+    wrap.appendChild(btn);
+    chatCol.appendChild(wrap);
+    scrollBottom();
+  }
+
+  /* ---------- 剧情脚本 ---------- */
+  function runPlot(){
+    addOption('我想要了解你', function(){
+      showThinking(function(){
+        addAssistant([
+          {text:'那些都是你想知道的我'}
+        ], function(){
+          addAssistantMedia(['Photo1.jpg','Photo2.jpg','Photo3.jpg','Photo4.jpg','Photo5.jpg','Photo6.jpg'], function(){
+            addAssistant([
+              {text:'「 虐」恋'},
+              {text:'姓名：免打扰，可以叫我免'},
+              {text:'所在团：素雪'},
+              {text:'性别：女'},
+              {text:'性取向：le/h，八无好女人'},
+              {text:'年龄：21'},
+              {text:'标签：ENFP-A，天秤座'},
+              {text:'话术风格：'},
+              {text:'主：非典型，中高恋/白话剖析/微哲意识流'},
+              {text:'副（概率掉落不可指定）：低无/轻佻/情绪风'}
+            ], function(){
+              addOption('那需要我做什么吗', function(){
+                showThinking(function(){
+                  addAssistant([
+                    {text:'没关系；爱树因为树是树，爱花因为花是花。无需为我改变任何，仅仅是你的存在就足够让我感到欣喜'},
+                    {text:''},
+                    {text:'须知：'},
+                    {text:'•不接男。'},
+                    {text:'•请提前告知喜雷。除指定风格基本为随机掉落'},
+                    {text:'•默认回合制，我不会打断你，也请不要打断我说话。', bold:true},
+                    {text:'•互相尊重，过程中觉得不舒服请及时叫停。高配合度体验更佳。'},
+                    {text:'•只接受友好礼貌的人类。抱着刁难审视的心态前来我会退单'}
+                  ], function(){
+                    addOption('查看历史消息列表', function(){
+                      openDrawer();
+                    }, false);
+                  });
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+  }
+
+  /* ---------- 抽屉 ---------- */
+  var drawer = document.getElementById('drawer');
+  var backdrop = document.getElementById('drawerBackdrop');
+  function openDrawer(){ drawer.classList.add('open'); backdrop.classList.add('show'); }
+  function closeDrawer(){ drawer.classList.remove('open'); backdrop.classList.remove('show'); }
+  document.getElementById('btnMenu').addEventListener('click', openDrawer);
+  document.getElementById('btnCloseDrawer').addEventListener('click', closeDrawer);
+  backdrop.addEventListener('click', closeDrawer);
+  document.querySelectorAll('.drawer-item').forEach(function(it){
+    it.addEventListener('click', function(){
+      var go = it.getAttribute('data-go');
+      closeDrawer();
+      setTimeout(function(){ setView(go); }, 260);
+    });
+  });
+  document.getElementById('btnNewChat').addEventListener('click', function(){
+    closeDrawer();
+    setTimeout(function(){ setView('chat'); }, 260);
+  });
+  document.querySelectorAll('.js-back-drawer').forEach(function(b){
+    b.addEventListener('click', function(){ openDrawer(); });
+  });
+  document.querySelectorAll('.js-back-chat').forEach(function(b){
+    b.addEventListener('click', function(){ setView('chat'); });
+  });
+
+  /* ---------- 音乐开关：本地 mp3 首次点击才加载，播放 / 关闭（循环，不做音量） ---------- */
+  var icoOn = document.getElementById('icoMusicOn');
+  var icoOff = document.getElementById('icoMusicOff');
+  var audio = null;
+  function getAudio(){
+    if(!audio){
+      audio = new Audio('世界终究不过失去你.mp3');
+      audio.loop = true;
+      audio.preload = 'auto';
+    }
+    return audio;
+  }
+  document.getElementById('btnMusic').addEventListener('click', function(){
+    musicOn = !musicOn;
+    if(musicOn){
+      var a = getAudio();
+      var p = a.play();
+      if(p && typeof p.catch === 'function'){
+        p.catch(function(){
+          musicOn = false; a.pause();
+        });
+      }
+    }else{
+      if(audio){ audio.pause(); }
+    }
+    icoOn.style.display = musicOn ? '' : 'none';
+    icoOff.style.display = musicOn ? 'none' : '';
+  });
+
+  /* ---------- 启动 ---------- */
+  runPlot();
+  setView('chat');
+})();
+</script>
+</body>
+</html>
