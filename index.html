@@ -761,7 +761,7 @@
     b.addEventListener('click', function(){ setView('chat'); });
   });
 
-  /* ---------- 音乐开关：本地 mp3 首次点击才加载，播放 / 关闭（循环，不做音量） ---------- */
+    /* ---------- 音乐：进页面自动播放，被浏览器拦截时等用户首次点击再播；按钮可手动开关 ---------- */
   var icoOn = document.getElementById('icoMusicOn');
   var icoOff = document.getElementById('icoMusicOff');
   var audio = null;
@@ -773,23 +773,39 @@
     }
     return audio;
   }
-  document.getElementById('btnMusic').addEventListener('click', function(){
-    musicOn = !musicOn;
-    if(musicOn){
-      var a = getAudio();
-      var p = a.play();
-      if(p && typeof p.catch === 'function'){
-        p.catch(function(){
-          musicOn = false; a.pause();
-        });
-      }
-    }else{
-      if(audio){ audio.pause(); }
+  function playMusic(){
+    musicOn = true;
+    var a = getAudio();
+    var p = a.play();
+    if(p && typeof p.catch === 'function'){
+      p.catch(function(){ musicOn = false; });
     }
-    icoOn.style.display = musicOn ? '' : 'none';
-    icoOff.style.display = musicOn ? 'none' : '';
+    icoOn.style.display = '';
+    icoOff.style.display = 'none';
+  }
+  function pauseMusic(){
+    musicOn = false;
+    if(audio){ audio.pause(); }
+    icoOn.style.display = 'none';
+    icoOff.style.display = '';
+  }
+  /* 进页面先尝试自动播放 */
+  playMusic();
+  /* 如果被浏览器拦截（musicOn 仍为 false），等用户第一次点页面任意位置再播 */
+  if(!musicOn){
+    var autoOnce = function(){
+      if(!musicOn){ playMusic(); }
+      document.removeEventListener('click', autoOnce);
+      document.removeEventListener('touchstart', autoOnce);
+    };
+    document.addEventListener('click', autoOnce);
+    document.addEventListener('touchstart', autoOnce);
+  }
+  /* 右上角按钮：手动开关 */
+  document.getElementById('btnMusic').addEventListener('click', function(){
+    if(musicOn){ pauseMusic(); } else { playMusic(); }
   });
-
+ 
   /* ---------- 启动 ---------- */
   runPlot();
   setView('chat');
