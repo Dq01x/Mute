@@ -789,17 +789,31 @@
     icoOn.style.display = 'none';
     icoOff.style.display = '';
   }
-    /* 进页面先尝试自动播放 */
-  playMusic();
-  /* 浏览器可能异步拦截播放，所以不管当前状态，都注册一次用户首次交互监听 */
-  var autoOnce = function(){
-    if(!musicOn){ playMusic(); }
-    document.removeEventListener('click', autoOnce);
-    document.removeEventListener('touchstart', autoOnce);
-  };
-  document.addEventListener('click', autoOnce);
-  document.addEventListener('touchstart', autoOnce);
- 
+      /* 进页面先尝试自动播放 */
+  tryAutoPlay();
+  /* 监听所有类型的用户交互，播放成功前一直重试 */
+  var autoEvents = ['pointerdown','touchstart','mousedown','click','keydown'];
+  function tryAutoPlay(){
+    if(musicOn) return;
+    var a = getAudio();
+    var p = a.play();
+    if(p && typeof p.then === 'function'){
+      p.then(function(){
+        musicOn = true;
+        icoOn.style.display = '';
+        icoOff.style.display = 'none';
+        autoEvents.forEach(function(ev){ document.removeEventListener(ev, tryAutoPlay); });
+      }).catch(function(){});
+    }
+  }
+  autoEvents.forEach(function(ev){ document.addEventListener(ev, tryAutoPlay); });
+  /* 右上角按钮：手动开关（阻止冒泡，避免和自动播放逻辑冲突） */
+  document.getElementById('btnMusic').addEventListener('click', function(e){
+    e.stopPropagation();
+    autoEvents.forEach(function(ev){ document.removeEventListener(ev, tryAutoPlay); });
+    if(musicOn){ pauseMusic(); } else { playMusic(); }
+  });
+
   /* ---------- 启动 ---------- */
   runPlot();
   setView('chat');
