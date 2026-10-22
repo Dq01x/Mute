@@ -789,22 +789,16 @@
     icoOn.style.display = 'none';
     icoOff.style.display = '';
   }
-  /* 进页面先尝试自动播放 */
+    /* 进页面先尝试自动播放 */
   playMusic();
-  /* 如果被浏览器拦截（musicOn 仍为 false），等用户第一次点页面任意位置再播 */
-  if(!musicOn){
-    var autoOnce = function(){
-      if(!musicOn){ playMusic(); }
-      document.removeEventListener('click', autoOnce);
-      document.removeEventListener('touchstart', autoOnce);
-    };
-    document.addEventListener('click', autoOnce);
-    document.addEventListener('touchstart', autoOnce);
-  }
-  /* 右上角按钮：手动开关 */
-  document.getElementById('btnMusic').addEventListener('click', function(){
-    if(musicOn){ pauseMusic(); } else { playMusic(); }
-  });
+  /* 浏览器可能异步拦截播放，所以不管当前状态，都注册一次用户首次交互监听 */
+  var autoOnce = function(){
+    if(!musicOn){ playMusic(); }
+    document.removeEventListener('click', autoOnce);
+    document.removeEventListener('touchstart', autoOnce);
+  };
+  document.addEventListener('click', autoOnce);
+  document.addEventListener('touchstart', autoOnce);
  
   /* ---------- 启动 ---------- */
   runPlot();
