@@ -1,57 +1,57 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mute.</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233565ee'/%3E%3Ctext x='16' y='22' font-family='Arial' font-size='17' font-weight='700' fill='%23fff' text-anchor='middle'%3EM%3C/text%3E%3C/svg%3E">
-<style>
-  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-  :root{
-    --bg:#ffffff; --border:#e4e4e7; --ink:#0d0d0f; --muted:#6e6e73;
-    --blue:#0b7ee9; --blue-soft:#ecf3fe; --btnblue:#3565ee;
-    --inputbar:#f2f2f4; --pillborder:#dcdcdf; --placeholder:#9c9ca0;
-  }
-  html,body{height:100%}
-  body{
-    background:var(--bg); color:var(--ink);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
-    -webkit-font-smoothing:antialiased; overflow:hidden;
-  }
-  button{font-family:inherit;background:none;border:none;color:inherit;cursor:pointer}
-  a{color:var(--blue);text-decoration:none}
-  a:hover{text-decoration:underline}
+<html 朗="zh-CN">
+<頭>
+<元 字符碼="UTF-8">
+<元 姓名="視角" 內容="寬度=設備寬度，初始尺度=1">
+<標題>靜音。</標題>
+<鏈接 rel="圖標" href="data:image/svg+xml，%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='00 32 32'%3E%3Crect width='32'height='32'rx='8'fill='%233565ee'/%3E%3ctext x='16'y='22'font-family='Arial'font-size='17'font-weight='700'fill='%3fff'text-anchor='middle'%3EM%3C/text%3E%3E/svg%3E">
+<風格>
+  *{盒子尺寸:邊框框;利潤:0;填料:0;-webkit-tap-高亮顏色:透明的}
+  :root{root{    --bg:#ffffff; --border:#e4e4e7; --ink:#0d0d0f; --muted:#6e6e73;{
+--bg:#ffffff； --border:#e4e4e7； --ink:#0d0d0f； --啞光:#6e6e73；--bg:#ffffff; --border:#e4e4e7; --ink:#0d0d0f; --muted:#6e6e73;
+--藍色:#0b7ee9； --藍色軟體:#ecf3fe； --按鈕藍色:#3565ee；--blue:#0b7ee9; --blue-soft:#ecf3fe; --btnblue:#3565ee;
+--輸入欄:#f2f2f4； --彈出框:#dcdcdf； --佔位符:#9c9ca0；--inputbar:#f2f2f4; --pillborder:#dcdcdf; --placeholder:#9c9ca0;
+  }}
+html，body{高度:100%}html,body{height:100%}
+身體{body{
+背景:var（--bg）；顏色:var（——墨水）；background:var(--bg); color:var(--ink);
+字體:-apple-system，BlinkMacSystemFont，Segoe UI，Roboto，HelveticaNeue，PingFang SC，Hiragino Sans GB，Microsoft YaHei，sans-serif；font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+-webkit-font-smoothing:抗鋸齒化；溢出:隱藏；-webkit-font-smoothing:antialiased; overflow:hidden;
+  }}
+按鈕{字體:繼承；背景:無；邊框:無；顏色:繼承；光標:指針}button{font-family:inherit;background:none;border:none;color:inherit;cursor:pointer}
+a{顏色:var（--藍色）；文字裝飾:無}a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:下底線}a:hover{text-decoration:underline}
 
-  #app{height:100dvh;display:flex;flex-direction:column}
+#app{高度:100dvh；顯示:柔性；柔性方向:柱形}app{height:100dvh;display:flex;flex-direction:column}
 
-  /* ===== 顶部栏 ===== */
-  #topbar{
-    height:56px;flex:0 0 56px;display:flex;align-items:center;justify-content:space-between;
-    padding:0 8px;border-bottom:1px solid var(--border);background:var(--bg);position:relative;z-index:30;
-  }
-  .top-btn{
-    width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-    color:var(--ink);position:relative;overflow:hidden;transition:background .15s;
-  }
-  .top-btn:hover{background:#f2f2f4}
-  .top-btn svg{width:22px;height:22px}
-  .tabs{display:flex;gap:2px;background:#ececf1;border-radius:10px;padding:3px}
-  .tab{
-    min-width:74px;height:32px;padding:0 14px;border-radius:8px;font-size:14.5px;font-weight:500;color:var(--muted);
-    display:flex;align-items:center;justify-content:center;transition:all .18s;position:relative;overflow:hidden;
-  }
-  .tab.active{background:var(--bg);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  /* ===== 頂部欄 ===== *//* ===== 顶部栏 ===== */
+#頂杆{topbar{
+高度:56px；柔性:0 0 56px；顯示:柔性；對齊項目:中心；合理內容:間距；height:56px;flex:0 0 56px;display:flex;align-items:center;justify-content:space-between;
+padding:0 8px；border-bottom:1px solid var（--border）；背景:var（--bg）；位置:相對；z-index:30；padding:0 8px;border-bottom:1px solid var(--border);background:var(--bg);position:relative;z-index:30;
+  }}
+  .top-btn{top-btn{
+寬度:40px；高度:40px；邊框半徑:50%；顯示:柔性；對齊項目:中心；證明內容:中心；width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+顏色:var（--墨水）；位置:相對；溢出:隱藏；過渡:背景.15秒；color:var(--ink);position:relative;overflow:hidden;transition:background .15s;:var（--墨水）；位置:相對；溢出:隱藏；過渡:背景.15秒；color:var(--ink);position:relative;overflow:hidden;transition:background .15s;
+  }}}}
+.top-btn:hover{背景:#f2f2f4}top-btn:hover{background:#f2f2f4}top-btn:hover{背景:#f2f2f4}top-btn:hover{background:#f2f2f4}
+  .top-btn svg{width:22px;height:22px}top-btn svg{width:22px;height:22px}
+  .tabs{display:flex;gap:2px;background:#ececf1;border-radius:10px;padding:3px}tabs{display:flex;gap:2px;background:#ececf1;border-radius:10px;padding:3px}
+  .tab{tab{
+    min-width:74px;height:32px;padding:0 14px;border-radius:8px;font-size:14.5px;font-weight:500;color:var(--muted);min-width:74px;height:32px;padding:0 14px;border-radius:8px;font-size:14.5px;font-weight:500;color:var(--muted);
+    display:flex;align-items:center;justify-content:center;transition:all .18s;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;transition:all .18s;position:relative;overflow:hidden;
+  }}
+  .tab.active{background:var(--bg);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}tab.active{background:var(--bg);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
 
-  /* ===== 主区域 ===== */
-  #main{flex:1 1 auto;position:relative;min-height:0}
-  .view{position:absolute;inset:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;display:none}
-  .view.active{display:block;animation:viewIn .25s ease}
-  @keyframes viewIn{from{opacity:0}to{opacity:1}}
+  /* ===== 主区域 ===== *//* ===== 主区域 ===== */
+  #main{flex:1 1 auto;position:relative;min-height:0}main{flex:1 1 auto;position:relative;min-height:0}
+  .view{position:absolute;inset:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;display:none}view{position:absolute;inset:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;display:none}
+  .view.active{display:block;animation:viewIn .25s ease}view.active{display:block;animation:viewIn .25s ease}
+  @keyframes viewIn{from{opacity:0}to{opacity:1}}@keyframes viewIn{from{opacity:0}to{opacity:1}}
 
-  /* 聊天视图：内部纵向 flex，消息区滚动，提示条贴输入框 */
-  #view-chat{overflow:hidden}
-  #view-chat.active{display:flex;flex-direction:column}
-  .chat-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;width:100%;max-width:760px;margin:0 auto}
+  /* 聊天视图：内部纵向 flex，消息区滚动，提示条贴输入框 *//* 聊天视图：内部纵向 flex，消息区滚动，提示条贴输入框 */
+  #view-chat{overflow:hidden}view-chat{overflow:hidden}
+  #
+  .
   .chat-col{max-width:760px;margin:0 auto;padding:14px 14px 20px}
 
   /* ===== 助手文字（固定字形，左→右遮罩 + 大范围渐显，不下沉、不模糊） ===== */
@@ -60,7 +60,7 @@
     opacity:0;clip-path:inset(0 100% 0 0);
     transition:opacity 1.05s cubic-bezier(.22,.61,.36,1),clip-path 1.05s cubic-bezier(.22,.61,.36,1);
     white-space:pre-wrap;word-break:break-word;
-  }
+<html lang="zh-CN">}
   .aline.bold{font-weight:800}
   .aline.spacer{height:10px;opacity:1;clip-path:none}
   .aline.shown{opacity:1;clip-path:inset(0 0 0 0)}
@@ -708,8 +708,11 @@
               {text:'标签：ENFP-A，天秤座'},
               {text:'常驻建模：蝴蝶结耳鸟/姆明耳狼尾'},
               {text:'话术风格：'},
-              {text:'主：非典型，（伪）中高恋，白话高剖析'},
-              {text:'副（概率掉落不可指定）：低无/轻佻/情绪风'}
+              {text:'主风格：非典型/（伪）中高恋'},
+              {text:'高共情引导/白话高剖析'},
+              {text:'*高剖会一定程度涉三，如不接受请一定提前注明'},
+              {text:'副风格：低无/黑骑士/伪救赎/意识流'}
+              {text:'*副风格概率掉落，不可指定'},
             ], function(){
               addOption('那需要我做什么吗', function(){
                 showThinking(function(){
